@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, clipboard, Menu, session, dialog } = requir
 const path = require('path');
 const { exec } = require('child_process');
 const fs = require('fs');
-const http = require('http');
+const https = require('https');
 
 app.commandLine.appendSwitch('disable-features', 'CookiesWithoutSameSiteMustBeSecure');
 let mainWindow;
@@ -55,12 +55,8 @@ function createWindow() {
     mainWindow.webContents.on('before-input-event', (event, input) => {
         if (input.key === 'F4' && input.type === 'keyDown') app.quit();
         else if (input.key === 'Escape' && input.type === 'keyDown') mainWindow.minimize();
+        else if (input.key === 'F2' && input.type === 'keyDown') mainWindow.webContents.goBack();
     });
-	mainWindow.webContents.on('before-input-event', (event, input) => {
-		if (input.key === 'F4' && input.type === 'keyDown') app.quit();
-		else if (input.key === 'Escape' && input.type === 'keyDown') mainWindow.minimize();
-		else if (input.key === 'F2' && input.type === 'keyDown') mainWindow.webContents.goBack();
-	});
 }
 
 function createMenu() {
@@ -119,45 +115,45 @@ function createMenu() {
             label: 'Help',
             submenu: [
                 {
-                    label: 'Update',
-                    click: () => {
-                        const localFilePath = path.join(__dirname, 'main.js');
-                        const remoteFileUrl = 'http://10.71.16.70/main.js';
+					label: 'Update',
+					click: () => {
+						const localFilePath = path.join(__dirname, 'main.js');
+						const remoteFileUrl = 'https://raw.githubusercontent.com/otqmerking/finder/main/main.js';
 
-                        const file = fs.createWriteStream(localFilePath);
-                        http.get(remoteFileUrl, (response) => {
-                            if (response.statusCode === 200) {
-                                response.pipe(file);
-                                file.on('finish', () => {
-                                    file.close();
-                                    dialog.showMessageBox(mainWindow, {
-                                        type: 'info',
-                                        title: 'Update Successful',
-                                        message: 'Finder is updated successfully. Restart the app now or later?',
-                                        buttons: ['Restart', 'Later'],
-                                    }).then((result) => {
-                                        if (result.response === 0) {
-                                            app.relaunch(); // Relaunch the app
-                                            app.exit(); // Ensure the app closes before relaunching
-                                        }
-                                    });
-                                });
-                            } else {
-                                dialog.showMessageBox(mainWindow, {
-                                    type: 'error',
-                                    title: 'Update Failed',
-                                    message: 'Error updating Finder. Please contact Amine.',
-                                });
-                            }
-                        }).on('error', (err) => {
-                            dialog.showMessageBox(mainWindow, {
-                                type: 'error',
-                                title: 'Update Failed',
-                                message: `Error updating Finder. Please contact Amine. \n${err.message}`,
-                            });
-                        });
-                    },
-                },
+						const file = fs.createWriteStream(localFilePath);
+						https.get(remoteFileUrl, (response) => { // Use https here
+							if (response.statusCode === 200) {
+								response.pipe(file);
+								file.on('finish', () => {
+									file.close();
+									dialog.showMessageBox(mainWindow, {
+										type: 'info',
+										title: 'Update Successful',
+										message: 'Finder is updated successfully. Restart the app now or later?',
+										buttons: ['Restart', 'Later'],
+									}).then((result) => {
+										if (result.response === 0) {
+											app.relaunch(); // Relaunch the app
+											app.exit(); // Ensure the app closes before relaunching
+										}
+									});
+								});
+							} else {
+								dialog.showMessageBox(mainWindow, {
+									type: 'error',
+									title: 'Update Failed',
+									message: 'Error updating Finder. Please contact Amine.',
+								});
+							}
+						}).on('error', (err) => {
+							dialog.showMessageBox(mainWindow, {
+								type: 'error',
+								title: 'Update Failed',
+								message: `Error updating Finder. Please contact Amine. \n${err.message}`,
+							});
+						});
+					},
+				}
             ],
         },
     ];
