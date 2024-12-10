@@ -115,7 +115,7 @@ function createMenu() {
             label: 'Help',
             submenu: [
                 {
-					label: 'Update',
+					label: 'salam',
 					click: () => {
 						const localFilePath = path.join(__dirname, 'main.js');
 						const remoteFileUrl = 'https://raw.githubusercontent.com/otqmerking/finder/main/main.js';
