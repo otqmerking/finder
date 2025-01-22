@@ -1,12 +1,14 @@
-const { app, BrowserWindow, ipcMain, clipboard, Menu, session, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, Menu, session, dialog, shell, Tray, Notification } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
+const http = require('http'); // Add this line
 const prompt = require('electron-prompt');
 
 app.commandLine.appendSwitch('disable-features', 'CookiesWithoutSameSiteMustBeSecure');
 
 let mainWindow;
+let tray = null;
 
 // Function to create the main window
 function createWindow() {
@@ -19,6 +21,7 @@ function createWindow() {
             contextIsolation: true,
             enableRemoteModule: false,
             nodeIntegration: false,
+            preload: path.join(__dirname, 'preload.js') // Add preload script
         },
     });
 
@@ -44,8 +47,9 @@ function createWindow() {
         callback(true);
     });
 
-    mainWindow.on('close', () => {
-        mainWindow = null;
+    mainWindow.on('close', (event) => {
+        event.preventDefault();
+        mainWindow.hide();
     });
 
     ipcMain.on('copy-to-clipboard', (event, text) => {
@@ -98,6 +102,9 @@ function createWindow() {
             action: 'allow', // Allow the new window to open
         };
     });
+
+    // Start background process to check for new orders
+    setInterval(checkForNewOrders, 5000); // Check every 5 seconds
 }
 
 // Function to handle "Find in Page" logic
@@ -131,10 +138,16 @@ function createMenu() {
                 {
                     label: 'Home',
                     click: () => {
-                        mainWindow.loadURL('https://10.71.16.70/Finder/resources/app/login.php');
+                        mainWindow.loadURL('https://10.71.16.70/Finder/resources/app/index.php');
                     },
                 },
                 { role: 'quit', label: 'Exit' },
+                {
+                    label: 'Sign out',
+                    click: () => {
+                        mainWindow.loadURL('https://10.71.16.70/Finder/resources/app/logout.php');
+                    },
+                },
             ],
         },
         {
@@ -150,6 +163,12 @@ function createMenu() {
                     label: 'Stock Manager',
                     click: () => {
                         mainWindow.loadURL('https://10.71.16.70/Finder/resources/app/stock/admin.php');
+                    },
+                },
+                {
+                    label: 'Orders',
+                    click: () => {
+                        mainWindow.loadURL('https://10.71.16.70/Finder/resources/app/order/notifications.html');
                     },
                 },
                 {
@@ -235,6 +254,18 @@ function createMenu() {
 app.on('ready', () => {
     createWindow();
     createMenu();
+
+    tray = new Tray(path.join(__dirname, 'icon.ico'));
+    const contextMenu = Menu.buildFromTemplate([
+        { label: 'Show App', click: () => { mainWindow.show(); } },
+        { label: 'Quit', click: () => { app.quit(); } }
+    ]);
+    tray.setToolTip('Stock Keeper');
+    tray.setContextMenu(contextMenu);
+
+    tray.on('click', () => {
+        mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
+    });
 });
 
 app.on('window-all-closed', () => {
@@ -245,6 +276,56 @@ app.on('activate', () => {
     if (mainWindow === null) createWindow();
 });
 
+ipcMain.on('order-notification', (event, notification) => {
+    new Notification({ title: 'Order Notification', body: notification }).show();
+});
+
 process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception:', error);
 });
+
+// Function to check for new orders
+function checkForNewOrders() {
+    http.get('http://10.71.16.70/Finder/Resources/app/order/orders.txt', (response) => {
+        let data = '';
+
+        response.on('data', (chunk) => {
+            data += chunk;
+        });
+
+        response.on('end', () => {
+            const orders = data.split('\n').filter(order => order.trim() !== '');
+
+            if (orders.length > 0) {
+                const lastOrder = orders[orders.length - 1];
+                const [userPart, matriculePart, dpnPart, quantityPart, dateTimePart] = lastOrder.split(', ');
+                const user = userPart.split(': ')[1];
+                const matricule = matriculePart.split(': ')[1];
+                const dpn = dpnPart.split(': ')[1];
+                const quantity = quantityPart.split(': ')[1];
+                const dateTime = dateTimePart.split(': ')[1];
+                const orderDate = new Date(dateTime);
+
+				const notification = new Notification({
+					title: 'New Order',
+					body: `You have a new order:\nThe technician ${user} ${matricule} has ordered ${quantity} of the DPN ${dpn}\nDate: ${orderDate.toLocaleDateString()}, Time: ${orderDate.toLocaleTimeString()}`,
+					silent: false,
+					sound: path.join(__dirname, 'notify.mp3')
+				});
+
+				notification.on('click', () => {
+					mainWindow.show(); // Bring the main window to the front
+					mainWindow.loadURL('https://10.71.16.70/finder/resources/app/order/notifications.html'); // Load the specified URL
+				});
+
+				notification.show();
+
+                // Send notification to renderer process
+                mainWindow.webContents.send('order-notification', `You have a new order:\nThe technician ${user} ${matricule} has ordered ${quantity} of the DPN ${dpn}\nDate: ${orderDate.toLocaleDateString()}, Time: ${orderDate.toLocaleTimeString()}`);
+            }
+        });
+
+    }).on('error', (err) => {
+        console.error('Error fetching orders.txt:', err);
+    });
+}
