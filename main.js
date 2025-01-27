@@ -177,6 +177,12 @@ function createMenu() {
                         mainWindow.loadURL('https://10.71.16.70/Finder/resources/app/pdf/pdf.php');
                     },
                 },
+				{
+                    label: 'Consumption',
+                    click: () => {
+                        mainWindow.loadURL('https://10.71.16.70/Finder/resources/app/consumption/consumption.html');
+                    },
+                },
             ],
         },
         {
