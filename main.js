@@ -57,9 +57,6 @@ function createWindow() {
     });
 
     mainWindow.webContents.on('before-input-event', (event, input) => {
-        if (input.control && input.key === 'f' && input.type === 'keyDown') {
-            handleFindInPage(mainWindow);
-        }
         if (input.key === 'F4' && input.type === 'keyDown') app.quit();
         else if (input.key === 'Escape' && input.type === 'keyDown') mainWindow.minimize();
         else if (input.key === 'F2' && input.type === 'keyDown') mainWindow.webContents.goBack();
@@ -91,13 +88,6 @@ function createWindow() {
 
         newWindow.loadURL(url);
 
-        // Add `Ctrl + F` to the new window
-        newWindow.webContents.on('before-input-event', (event, input) => {
-            if (input.control && input.key === 'f' && input.type === 'keyDown') {
-                handleFindInPage(newWindow);
-            }
-        });
-
         return {
             action: 'allow', // Allow the new window to open
         };
@@ -105,28 +95,6 @@ function createWindow() {
 
     // Start background process to check for new orders
     setInterval(checkForNewOrders, 5000); // Check every 5 seconds
-}
-
-// Function to handle "Find in Page" logic
-function handleFindInPage(targetWindow) {
-    prompt({
-        title: 'Find in Page',
-        label: 'Enter search term:',
-        inputAttrs: {
-            type: 'text',
-        },
-        type: 'input',
-    })
-        .then((result) => {
-            if (result !== null && result.trim() !== '') {
-                targetWindow.webContents.findInPage(result);
-            } else {
-                console.log('Search term cannot be empty');
-            }
-        })
-        .catch((err) => {
-            console.error('Error showing input box:', err);
-        });
 }
 
 // Function to create the menu
@@ -311,7 +279,6 @@ function checkForNewOrders() {
                 const quantity = quantityPart.split(': ')[1];
                 const dateTime = dateTimePart.split(': ')[1];
                 const orderDate = new Date(dateTime);
-
 				const notification = new Notification({
 					title: 'New Order',
 					body: `You have a new order:\nThe technician ${user} ${matricule} has ordered ${quantity} of the DPN ${dpn}\nDate: ${orderDate.toLocaleDateString()}, Time: ${orderDate.toLocaleTimeString()}`,
