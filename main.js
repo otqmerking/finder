@@ -67,10 +67,12 @@ function createWindow() {
     });
 
     // Window event handlers
-    mainWindow.on('close', (event) => {
-        event.preventDefault();
-        mainWindow.hide();
-    });
+	mainWindow.on('close', (event) => {
+		event.preventDefault();
+		mainWindow.destroy(); // Completely remove the window
+		app.quit(); // Ensure all processes close
+	});
+
 
     // IPC handlers
     ipcMain.on('copy-to-clipboard', (event, text) => {
@@ -181,7 +183,7 @@ function createMenu() {
                 },
                 {
                     label: 'Orders',
-                    click: () => mainWindow.loadURL('https://10.71.16.70/Finder/resources/app/order/notifications.html')
+                    click: () => mainWindow.loadURL('https://10.71.16.70/Finder/resources/app/order/notifications.php')
                 },
                 {
                     label: 'Catalogs',
@@ -296,6 +298,11 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
     if (mainWindow === null) createWindow();
+});
+
+app.on('before-quit', () => {
+    mainWindow.destroy(); // Destroy window
+    process.exit(0); // Force exit
 });
 
 // Error handling
