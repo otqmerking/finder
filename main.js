@@ -67,12 +67,11 @@ function createWindow() {
     });
 
     // Window event handlers
-	mainWindow.on('close', (event) => {
-		event.preventDefault();
-		mainWindow.destroy(); // Completely remove the window
-		app.quit(); // Ensure all processes close
-	});
-
+    mainWindow.on('close', (event) => {
+        event.preventDefault();
+        mainWindow.destroy();
+        app.quit();
+    });
 
     // IPC handlers
     ipcMain.on('copy-to-clipboard', (event, text) => {
@@ -125,7 +124,6 @@ function toggleNotifications() {
     const destPath = path.join(__dirname, 'notify.js');
     
     if (isNotifyEnabled()) {
-        // Remove notify.js
         try {
             fs.unlinkSync(destPath);
             console.log('Notifications disabled - notify.js removed');
@@ -135,7 +133,6 @@ function toggleNotifications() {
             return;
         }
     } else {
-        // Copy notify.js from notify folder
         try {
             if (!fs.existsSync(sourcePath)) {
                 throw new Error('Source notify.js not found in notify folder');
@@ -149,7 +146,6 @@ function toggleNotifications() {
         }
     }
     
-    // Reload the app
     app.relaunch();
     app.exit();
 }
@@ -234,41 +230,86 @@ function createMenu() {
 }
 
 function handleAppUpdate() {
-    const localFilePath = path.join(__dirname, 'main.js');
-    const remoteFileUrl = 'https://raw.githubusercontent.com/otqmerking/finder/main/main.js';
+    const filesToUpdate = [
+        {
+            localPath: path.join(__dirname, 'main.js'),
+            remoteUrl: 'https://raw.githubusercontent.com/otqmerking/finder/main/main.js'
+        },
+        {
+            localPath: path.join(__dirname, 'notify', 'notify.js'),
+            remoteUrl: 'https://raw.githubusercontent.com/otqmerking/finder/main/notify.js',
+            ensureDirectory: true
+        }
+    ];
 
-    const file = fs.createWriteStream(localFilePath);
-    https.get(remoteFileUrl, (response) => {
-        if (response.statusCode === 200) {
-            response.pipe(file);
-            file.on('finish', () => {
-                file.close();
-                dialog.showMessageBox(mainWindow, {
-                    type: 'info',
-                    title: 'Update Successful',
-                    message: 'Finder is updated successfully. Restart the app now or later?',
-                    buttons: ['Restart', 'Later'],
-                }).then((result) => {
-                    if (result.response === 0) {
-                        app.relaunch();
-                        app.exit();
-                    }
-                });
+    let filesUpdated = 0;
+    let errors = [];
+
+    filesToUpdate.forEach(file => {
+        try {
+            // Create directory if needed
+            if (file.ensureDirectory) {
+                const dir = path.dirname(file.localPath);
+                if (!fs.existsSync(dir)) {
+                    fs.mkdirSync(dir, { recursive: true });
+                }
+            }
+
+            const fileStream = fs.createWriteStream(file.localPath);
+            https.get(file.remoteUrl, (response) => {
+                if (response.statusCode === 200) {
+                    response.pipe(fileStream);
+                    fileStream.on('finish', () => {
+                        fileStream.close();
+                        filesUpdated++;
+                        checkUpdateCompletion();
+                    });
+                } else {
+                    errors.push(`Failed to download ${path.basename(file.localPath)}: HTTP ${response.statusCode}`);
+                    checkUpdateCompletion();
+                }
+            }).on('error', (err) => {
+                errors.push(`Error downloading ${path.basename(file.localPath)}: ${err.message}`);
+                checkUpdateCompletion();
+            });
+        } catch (err) {
+            errors.push(`Error preparing to update ${path.basename(file.localPath)}: ${err.message}`);
+            checkUpdateCompletion();
+        }
+    });
+
+    function checkUpdateCompletion() {
+        if (filesUpdated + errors.length === filesToUpdate.length) {
+            showUpdateResult();
+        }
+    }
+
+    function showUpdateResult() {
+        if (errors.length === 0) {
+            dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'Update Successful',
+                message: 'All files updated successfully. Restart the app now or later?',
+                buttons: ['Restart', 'Later'],
+            }).then((result) => {
+                if (result.response === 0) {
+                    app.relaunch();
+                    app.exit();
+                }
             });
         } else {
+            let errorMessage = `${filesUpdated} file(s) updated successfully.\n\n`;
+            errorMessage += `${errors.length} error(s) occurred:\n\n`;
+            errorMessage += errors.join('\n');
+
             dialog.showMessageBox(mainWindow, {
                 type: 'error',
-                title: 'Update Failed',
-                message: 'Error updating Finder. Please contact support.',
+                title: 'Update Completed With Errors',
+                message: errorMessage,
+                buttons: ['OK'],
             });
         }
-    }).on('error', (err) => {
-        dialog.showMessageBox(mainWindow, {
-            type: 'error',
-            title: 'Update Failed',
-            message: `Error updating Finder. \n${err.message}`,
-        });
-    });
+    }
 }
 
 // App lifecycle events
@@ -301,8 +342,8 @@ app.on('activate', () => {
 });
 
 app.on('before-quit', () => {
-    mainWindow.destroy(); // Destroy window
-    process.exit(0); // Force exit
+    mainWindow.destroy();
+    process.exit(0);
 });
 
 // Error handling
