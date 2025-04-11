@@ -16,7 +16,7 @@ function showNewOrderNotification(mainWindow, orderDetails) {
         notification.on('click', () => {
             if (mainWindow) {
                 mainWindow.show();
-                mainWindow.loadURL('https://10.71.16.70/finder/resources/app/order/notifications.html');
+                mainWindow.loadURL('https://10.71.16.70/finder/resources/app/order/notifications.php');
             }
         });
 
