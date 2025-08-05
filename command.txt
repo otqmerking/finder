@@ -1,1 +1,1 @@
-DESTROY
+SAFE
