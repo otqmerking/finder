@@ -586,7 +586,7 @@ function WorkerInterface() {
           </div>
 
           {selectedLocation && (
-            <div className="p-4 bg-gray-50 rounded-lg">
+            <div className={`p-4 rounded-lg ${currentFault ? 'bg-red-50 border border-red-200' : 'bg-gray-50'}`}>
               <div className="flex items-center space-x-2 mb-2">
                 <MapPin className="w-4 h-4" />
                 <span className="font-medium">{selectedLocation}</span>
@@ -598,6 +598,18 @@ function WorkerInterface() {
                   <Badge className="bg-green-100 text-green-800">OK</Badge>
                 )}
               </div>
+              
+              {currentFault && currentFault.description && (
+                <div className="mt-3 p-3 bg-white border border-red-200 rounded-md">
+                  <p className="text-sm font-medium text-red-800 mb-1">Current Fault Description:</p>
+                  <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded border-l-4 border-red-400">
+                    "{currentFault.description}"
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Reported by: {currentFault.worker_uuid} • Duration: {Math.floor((new Date() - new Date(currentFault.fault_start)) / 60000)} minutes
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
