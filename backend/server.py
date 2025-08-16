@@ -237,6 +237,8 @@ async def resolve_fault(resolve_data: FaultResolve):
     fault_start = fault["fault_start"]
     if isinstance(fault_start, str):
         fault_start = datetime.fromisoformat(fault_start.replace('Z', '+00:00'))
+    elif isinstance(fault_start, datetime) and fault_start.tzinfo is None:
+        fault_start = fault_start.replace(tzinfo=timezone.utc)
     
     duration = (fault_end - fault_start).total_seconds() / 60.0
     
