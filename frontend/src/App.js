@@ -653,16 +653,39 @@ function WorkerInterface() {
           <CardHeader>
             <CardTitle className="text-red-800 flex items-center space-x-2">
               <AlertTriangle className="w-5 h-5" />
-              <span>Active Fault at {selectedLocation}</span>
+              <span>⚠️ REVIEW BEFORE RESOLVING: Active Fault at {selectedLocation}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2 text-sm">
-              <p><strong>Started:</strong> {new Date(currentFault.fault_start).toLocaleString()}</p>
-              <p><strong>Duration:</strong> {Math.floor((new Date() - new Date(currentFault.fault_start)) / 60000)} minutes</p>
-              {currentFault.description && (
-                <p><strong>Description:</strong> {currentFault.description}</p>
-              )}
+            <div className="space-y-3">
+              <div className="bg-white p-4 rounded-lg border-l-4 border-red-500">
+                <p className="font-semibold text-red-800 mb-2">Fault Description:</p>
+                <p className="text-lg text-gray-800 bg-yellow-50 p-3 rounded border font-medium">
+                  "{currentFault.description || 'No description provided'}"
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="bg-white p-3 rounded">
+                  <p className="font-medium text-gray-600">Started:</p>
+                  <p className="text-gray-800">{new Date(currentFault.fault_start).toLocaleString()}</p>
+                </div>
+                <div className="bg-white p-3 rounded">
+                  <p className="font-medium text-gray-600">Duration:</p>
+                  <p className="text-gray-800">{Math.floor((new Date() - new Date(currentFault.fault_start)) / 60000)} minutes</p>
+                </div>
+                <div className="bg-white p-3 rounded">
+                  <p className="font-medium text-gray-600">Reported by:</p>
+                  <p className="text-gray-800 text-xs">{currentFault.worker_uuid}</p>
+                </div>
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  <strong>⚠️ Important:</strong> Please review the fault description above before marking this issue as resolved. 
+                  Make sure the problem described has been properly addressed.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
