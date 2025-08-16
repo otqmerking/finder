@@ -642,7 +642,7 @@ function WorkerInterface() {
               size="lg"
             >
               <CheckCircle className="w-5 h-5" />
-              <span>{t('markResolved')}</span>
+              <span>{currentFault ? `${t('markResolved')} - "${currentFault.description?.substring(0, 30)}${currentFault.description?.length > 30 ? '...' : ''}"` : t('markResolved')}</span>
             </Button>
           </div>
         </CardContent>
