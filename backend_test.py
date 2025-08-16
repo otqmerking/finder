@@ -92,6 +92,14 @@ class FactoryFaultAPITester:
 
     def test_report_fault(self, location_name="1A"):
         """Test reporting a new fault"""
+        # First check if there's already an active fault and resolve it
+        active_success, active_faults = self.run_test("Check Active Faults", "GET", "faults/active", 200)
+        if active_success and location_name in active_faults:
+            existing_fault_id = active_faults[location_name]['id']
+            print(f"   Found existing fault {existing_fault_id}, resolving first...")
+            resolve_data = {"fault_id": existing_fault_id}
+            self.run_test("Resolve Existing Fault", "POST", "faults/resolve", 200, data=resolve_data)
+        
         fault_data = {
             "worker_uuid": self.worker_uuid,
             "location_name": location_name,
