@@ -27,6 +27,7 @@ app.commandLine.appendSwitch('disable-features', 'CookiesWithoutSameSiteMustBeSe
 
 let mainWindow;
 let tray = null;
+let findWindow = null;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -78,6 +79,22 @@ function createWindow() {
         clipboard.writeText(text);
     });
 
+    ipcMain.on('find-text', (event, text) => {
+        if (mainWindow && text.trim() !== '') {
+            mainWindow.webContents.findInPage(text);
+        }
+    });
+
+    ipcMain.on('close-find', () => {
+        if (findWindow) {
+            findWindow.close();
+            findWindow = null;
+        }
+        if (mainWindow) {
+            mainWindow.webContents.stopFindInPage('clearSelection');
+        }
+    });
+
     // Keyboard shortcuts
     mainWindow.webContents.on('before-input-event', (event, input) => {
         if (input.key === 'F4' && input.type === 'keyDown') app.quit();
@@ -113,6 +130,108 @@ function createWindow() {
             notificationModule.checkForNewOrders(mainWindow);
         }
     }, 5000);
+}
+
+function openFindWindow() {
+    if (findWindow) {
+        findWindow.focus();
+        return;
+    }
+
+    findWindow = new BrowserWindow({
+        parent: mainWindow,
+        modal: true,
+        width: 400,  // Increased width to accommodate the close button
+        height: 120, // Increased height slightly
+        frame: false,
+        resizable: false,
+        alwaysOnTop: true,
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false
+        }
+    });
+
+    findWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { 
+                    margin: 0; 
+                    font-family: Arial, sans-serif; 
+                    background: #f0f0f0; 
+                    display: flex;
+                    flex-direction: column;
+                }
+                .search-container {
+                    display: flex;
+                    padding: 10px;
+                    align-items: center;
+                }
+                input { 
+                    flex: 1;
+                    height: 36px;
+                    padding: 8px;
+                    font-size: 14px;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                    margin-right: 10px;
+                }
+                .close-btn {
+                    width: 36px;
+                    height: 36px;
+                    background: #ff4444;
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 16px;
+                    font-weight: bold;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .close-btn:hover {
+                    background: #cc0000;
+                }
+                .hint {
+                    padding: 0 10px;
+                    font-size: 12px;
+                    color: #666;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="search-container">
+                <input id="findInput" type="text" placeholder="Type to search..." autofocus />
+                <button class="close-btn" id="closeBtn">X</button>
+            </div>
+            <div class="hint">Press Enter to search, Escape to close</div>
+            <script>
+                const { ipcRenderer } = require('electron');
+                const input = document.getElementById('findInput');
+                const closeBtn = document.getElementById('closeBtn');
+
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        ipcRenderer.send('find-text', input.value);
+                    } else if (e.key === 'Escape') {
+                        ipcRenderer.send('close-find');
+                    }
+                });
+                
+                closeBtn.addEventListener('click', () => {
+                    ipcRenderer.send('close-find');
+                });
+            </script>
+        </body>
+        </html>
+    `));
+
+    findWindow.on('closed', () => {
+        findWindow = null;
+    });
 }
 
 function isNotifyEnabled() {
@@ -189,6 +308,10 @@ function createMenu() {
                     label: 'Consumption',
                     click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/consumption/consumption.html')
                 },
+                {
+                    label: 'AVIS',
+                    click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/supplier.php')
+                }
             ]
         },
         {
@@ -203,6 +326,11 @@ function createMenu() {
         {
             label: 'View',
             submenu: [
+                {
+                    label: 'Find',
+                    accelerator: 'Alt+F',
+                    click: () => openFindWindow()
+                },
                 { role: 'reload', label: 'Reload' },
                 { role: 'forceReload', label: 'Force Reload' },
                 { role: 'resetZoom', label: 'Actual Size' },
