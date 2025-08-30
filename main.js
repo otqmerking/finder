@@ -140,12 +140,13 @@ function openFindWindow() {
 
     findWindow = new BrowserWindow({
         parent: mainWindow,
-        modal: true,
-        width: 400,  // Increased width to accommodate the close button
-        height: 120, // Increased height slightly
+        modal: false, // Changed to false to allow dragging
+        width: 400,
+        height: 120,
         frame: false,
         resizable: false,
         alwaysOnTop: true,
+        movable: true, // Enable window movement
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false
@@ -160,28 +161,39 @@ function openFindWindow() {
                 body { 
                     margin: 0; 
                     font-family: Arial, sans-serif; 
-                    background: #f0f0f0; 
+                    background: #2c3e50;
                     display: flex;
                     flex-direction: column;
+                    -webkit-app-region: drag; /* Make entire window draggable */
+                    height: 100vh;
+                    overflow: hidden;
                 }
                 .search-container {
                     display: flex;
                     padding: 10px;
                     align-items: center;
+                    -webkit-app-region: no-drag; /* Make input area not draggable */
                 }
                 input { 
                     flex: 1;
                     height: 36px;
-                    padding: 8px;
+                    padding: 8px 12px;
                     font-size: 14px;
-                    border: 1px solid #ccc;
+                    border: 1px solid #3498db;
                     border-radius: 4px;
                     margin-right: 10px;
+                    background: #ecf0f1;
+                    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+                }
+                input:focus {
+                    outline: none;
+                    border-color: #2980b9;
+                    box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
                 }
                 .close-btn {
                     width: 36px;
                     height: 36px;
-                    background: #ff4444;
+                    background: #e74c3c;
                     color: white;
                     border: none;
                     border-radius: 4px;
@@ -191,23 +203,47 @@ function openFindWindow() {
                     display: flex;
                     align-items: center;
                     justify-content: center;
+                    transition: background 0.2s;
                 }
                 .close-btn:hover {
-                    background: #cc0000;
+                    background: #c0392b;
                 }
                 .hint {
                     padding: 0 10px;
+                    font-size: 11px;
+                    color: #bdc3c7;
+                    -webkit-app-region: no-drag; /* Make hint text not draggable */
+                    margin-top: 5px;
+                }
+                .title-bar {
+                    height: 24px;
+                    background: #34495e;
+                    display: flex;
+                    align-items: center;
+                    justify-content: flex-end;
+                    padding: 0 5px;
+                    -webkit-app-region: drag;
+                    border-top-left-radius: 5px;
+                    border-top-right-radius: 5px;
+                }
+                .title-text {
+                    flex: 1;
+                    text-align: center;
+                    color: #ecf0f1;
                     font-size: 12px;
-                    color: #666;
+                    padding-left: 30px;
                 }
             </style>
         </head>
         <body>
+            <div class="title-bar">
+                <div class="title-text">Search</div>
+            </div>
             <div class="search-container">
                 <input id="findInput" type="text" placeholder="Type to search..." autofocus />
-                <button class="close-btn" id="closeBtn">X</button>
+                <button class="close-btn" id="closeBtn" title="Close">X</button>
             </div>
-            <div class="hint">Press Enter to search, Escape to close</div>
+            <div class="hint">Press Enter to search, Escape to close • Drag from top to move</div>
             <script>
                 const { ipcRenderer } = require('electron');
                 const input = document.getElementById('findInput');
@@ -224,6 +260,12 @@ function openFindWindow() {
                 closeBtn.addEventListener('click', () => {
                     ipcRenderer.send('close-find');
                 });
+                
+                // Focus the input when window is shown
+                setTimeout(() => {
+                    input.focus();
+                    input.select();
+                }, 100);
             </script>
         </body>
         </html>
@@ -232,6 +274,9 @@ function openFindWindow() {
     findWindow.on('closed', () => {
         findWindow = null;
     });
+
+    // Add slight transparency effect for a modern look
+    findWindow.setOpacity(0.98);
 }
 
 function isNotifyEnabled() {
