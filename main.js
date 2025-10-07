@@ -351,7 +351,16 @@ function createMenu() {
                 },
                 {
                     label: 'Consumption',
-                    click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/consumption/consumption.html')
+                    submenu: [
+                        {
+                            label: 'Analytics',
+                            click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/consumption/consumption.html')
+                        },
+                        {
+                            label: 'History',
+                            click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/history.html')
+                        }
+                    ]
                 },
                 {
                     label: 'AVIS',
