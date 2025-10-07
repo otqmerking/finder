@@ -373,7 +373,7 @@ function createMenu() {
             submenu: [
                 {
                     label: 'CV',
-                    click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/cv.html')
+                    click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/cv.pdf')
                 },
             ]
         },
