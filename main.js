@@ -335,7 +335,7 @@ function createMenu() {
             submenu: [
                 {
                     label: 'Tech',
-                    click: () => mainWindow.loadURL('http://dlbsxk8q3.aptiv.com/Finder/resources/app/tech/tech.php')
+                    click: () => mainWindow.loadURL('http://dlbsxk8q3.aptiv.com/Finder/resources/app/tech/tech.html')
                 },
                 {
                     label: 'Stock Manager',
