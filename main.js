@@ -320,12 +320,12 @@ function createMenu() {
             label: 'File',
             submenu: [
                 {
-                    label: 'Home',
+                    label: '🏠 Home',
                     click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/index.php')
                 },
-                { role: 'quit', label: 'Exit' },
+                { role: 'quit', label: '🚪 Exit' },
                 {
-                    label: 'Sign out',
+                    label: '🔒 Sign out',
                     click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/logout.php')
                 },
             ]
@@ -334,36 +334,40 @@ function createMenu() {
             label: 'Services',
             submenu: [
                 {
-                    label: 'Tech',
+                    label: '🧰 Tech',
                     click: () => mainWindow.loadURL('http://dlbsxk8q3.aptiv.com/Finder/resources/app/tech/tech.html')
                 },
                 {
-                    label: 'Stock Manager',
+                    label: '📦 Stock Manager',
                     click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/stock/admin.php')
                 },
                 {
-                    label: 'Orders',
+                    label: '📭 No Inventory',
+                    click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/noinvo.php')
+                },
+                {
+                    label: '🛒 Orders',
                     click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/order/notifications.php')
                 },
                 {
-                    label: 'Catalogs',
+                    label: '📚 Catalogs',
                     click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/pdf/pdf.php')
                 },
                 {
-                    label: 'Consumption',
+                    label: '⚙️ Consumption',
                     submenu: [
                         {
-                            label: 'Analytics',
+                            label: '📊 Analytics',
                             click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/consumption/consumption.html')
                         },
                         {
-                            label: 'History',
+                            label: '🕒 History',
                             click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/history.html')
                         }
                     ]
                 },
                 {
-                    label: 'AVIS',
+                    label: '🚚 Supplier',
                     click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/supplier.php')
                 }
             ]
@@ -372,7 +376,7 @@ function createMenu() {
             label: 'Developer',
             submenu: [
                 {
-                    label: 'CV',
+                    label: '👨‍💻 Developer',
                     click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/cv.pdf')
                 },
             ]
@@ -381,27 +385,26 @@ function createMenu() {
             label: 'View',
             submenu: [
                 {
-                    label: 'Find',
+                    label: '🔍 Find',
                     accelerator: 'Alt+F',
                     click: () => openFindWindow()
                 },
-                { role: 'reload', label: 'Reload' },
-                { role: 'forceReload', label: 'Force Reload' },
-                { role: 'resetZoom', label: 'Actual Size' },
-                { role: 'zoomIn', label: 'Zoom In' },
-                { role: 'zoomOut', label: 'Zoom Out' },
+                { role: 'forceReload', label: '🔄 Reload' },
+                { role: 'resetZoom', label: '🖼️ Actual Size' },
+                { role: 'zoomIn', label: '➕ Zoom In' },
+                { role: 'zoomOut', label: '➖ Zoom Out' },
             ]
         },
         {
             label: 'Help',
             submenu: [
                 {
-                    label: 'Update',
+                    label: '🔄 Update',
                     click: () => handleAppUpdate()
                 },
                 {
                     id: 'toggle-notifications',
-                    label: isNotifyEnabled() ? 'Notify Off' : 'Notify On',
+                    label: isNotifyEnabled() ? '🔕 Notify Off' : '🔔 Notify On',
                     click: () => toggleNotifications()
                 }
             ]
