@@ -367,6 +367,19 @@ function createMenu() {
                     ]
                 },
                 {
+                    label: '🎬 Media',
+                    submenu: [
+                        {
+                            label: '📹 Videos',
+                            click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/video.php')
+                        },
+                        {
+                            label: '🧊 Models',
+                            click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/model.php')
+                        }
+                    ]
+                },
+                {
                     label: '🚚 Supplier',
                     click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/supplier.php')
                 }
