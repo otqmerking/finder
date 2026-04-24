@@ -65,7 +65,7 @@ function createWindow() {
     });
 
     // Load main URL
-    mainWindow.loadURL('https://dlbsxk8q3.versigent.com/Finder/resources/app/login.php');
+    mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/login.php');
 
     // Security handling
     app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
@@ -525,12 +525,12 @@ function createMenu() {
             submenu: [
                 {
                     label: '🏠 Home',
-                    click: () => mainWindow.loadURL('https://dlbsxk8q3.versigent.com/Finder/resources/app/index.php')
+                    click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/index.php')
                 },
                 { role: 'quit', label: '🚪 Exit' },
                 {
                     label: '🔒 Sign out',
-                    click: () => mainWindow.loadURL('https://dlbsxk8q3.versigent.com/Finder/resources/app/logout.php')
+                    click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/logout.php')
                 },
             ]
         },
@@ -539,11 +539,11 @@ function createMenu() {
             submenu: [
                 {
                     label: '🧰 Tech',
-                    click: () => mainWindow.loadURL('http://dlbsxk8q3.versigent.com/Finder/resources/app/tech/tech.html')
+                    click: () => mainWindow.loadURL('http://dlbsxk8q3.aptiv.com/Finder/resources/app/tech/tech.html')
                 },
                 {
                     label: '📦 Stock Manager',
-                    click: () => mainWindow.loadURL('https://dlbsxk8q3.versigent.com/Finder/resources/app/stock/admin.php')
+                    click: () => mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/stock/admin.php')
                 },
                 {
                     label: '📭 No Inventory',
