@@ -65,7 +65,7 @@ function createWindow() {
     });
 
     // Load main URL
-    mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/Finder/resources/app/login.php');
+    mainWindow.loadURL('https://dlbsxk8q3.aptiva.com/Finder/resources/app/login.php');
 
     // Security handling
     app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
