@@ -2,6 +2,12 @@ const { app, BrowserWindow, ipcMain, clipboard, Menu, session, dialog, shell, Tr
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
+const crypto = require('crypto');
+
+// Auto-update configuration
+const AUTO_UPDATE_INTERVAL = 30000; // Check every 30 seconds
+let updateCheckInterval = null;
+let isUpdating = false;
 
 // Notification module with dynamic loading
 let notificationModule = {
@@ -140,13 +146,13 @@ function openFindWindow() {
 
     findWindow = new BrowserWindow({
         parent: mainWindow,
-        modal: false, // Changed to false to allow dragging
+        modal: false,
         width: 400,
         height: 120,
         frame: false,
         resizable: false,
         alwaysOnTop: true,
-        movable: true, // Enable window movement
+        movable: true,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false
@@ -164,7 +170,7 @@ function openFindWindow() {
                     background: #2c3e50;
                     display: flex;
                     flex-direction: column;
-                    -webkit-app-region: drag; /* Make entire window draggable */
+                    -webkit-app-region: drag;
                     height: 100vh;
                     overflow: hidden;
                 }
@@ -172,7 +178,7 @@ function openFindWindow() {
                     display: flex;
                     padding: 10px;
                     align-items: center;
-                    -webkit-app-region: no-drag; /* Make input area not draggable */
+                    -webkit-app-region: no-drag;
                 }
                 input { 
                     flex: 1;
@@ -212,7 +218,7 @@ function openFindWindow() {
                     padding: 0 10px;
                     font-size: 11px;
                     color: #bdc3c7;
-                    -webkit-app-region: no-drag; /* Make hint text not draggable */
+                    -webkit-app-region: no-drag;
                     margin-top: 5px;
                 }
                 .title-bar {
@@ -261,7 +267,6 @@ function openFindWindow() {
                     ipcRenderer.send('close-find');
                 });
                 
-                // Focus the input when window is shown
                 setTimeout(() => {
                     input.focus();
                     input.select();
@@ -275,7 +280,6 @@ function openFindWindow() {
         findWindow = null;
     });
 
-    // Add slight transparency effect for a modern look
     findWindow.setOpacity(0.98);
 }
 
@@ -312,6 +316,206 @@ function toggleNotifications() {
     
     app.relaunch();
     app.exit();
+}
+
+// Calculate file hash for version checking
+function calculateFileHash(filePath) {
+    return new Promise((resolve, reject) => {
+        if (!fs.existsSync(filePath)) {
+            resolve(null);
+            return;
+        }
+        
+        const hash = crypto.createHash('sha256');
+        const stream = fs.createReadStream(filePath);
+        
+        stream.on('data', data => hash.update(data));
+        stream.on('end', () => resolve(hash.digest('hex')));
+        stream.on('error', reject);
+    });
+}
+
+// Silent auto-update function
+async function checkAndUpdateSilently() {
+    if (isUpdating) {
+        console.log('Update already in progress, skipping...');
+        return;
+    }
+    
+    const filesToUpdate = [
+        {
+            localPath: path.join(__dirname, 'main.js'),
+            remoteUrl: 'https://raw.githubusercontent.com/otqmerking/finder/main/main.js',
+            backupPath: path.join(__dirname, 'main.js.backup')
+        },
+        {
+            localPath: path.join(__dirname, 'notify', 'notify.js'),
+            remoteUrl: 'https://raw.githubusercontent.com/otqmerking/finder/main/notify.js',
+            ensureDirectory: true,
+            backupPath: path.join(__dirname, 'notify', 'notify.js.backup')
+        }
+    ];
+    
+    let hasUpdates = false;
+    let updates = [];
+    
+    // Check for updates
+    for (const file of filesToUpdate) {
+        try {
+            // Create directory if needed
+            if (file.ensureDirectory) {
+                const dir = path.dirname(file.localPath);
+                if (!fs.existsSync(dir)) {
+                    fs.mkdirSync(dir, { recursive: true });
+                }
+            }
+            
+            // Get current file hash if exists
+            const currentHash = await calculateFileHash(file.localPath);
+            
+            // Download remote file to temp location
+            const tempPath = file.localPath + '.temp';
+            await downloadFile(file.remoteUrl, tempPath);
+            
+            // Calculate remote file hash
+            const remoteHash = await calculateFileHash(tempPath);
+            
+            // Compare hashes
+            if (currentHash !== remoteHash) {
+                hasUpdates = true;
+                updates.push({
+                    ...file,
+                    tempPath,
+                    remoteHash
+                });
+                console.log(`Update available for ${path.basename(file.localPath)}`);
+            } else {
+                // Remove temp file if no update
+                if (fs.existsSync(tempPath)) {
+                    fs.unlinkSync(tempPath);
+                }
+                console.log(`No update needed for ${path.basename(file.localPath)}`);
+            }
+        } catch (err) {
+            console.error(`Error checking update for ${path.basename(file.localPath)}:`, err.message);
+        }
+    }
+    
+    // Apply updates if available
+    if (hasUpdates) {
+        isUpdating = true;
+        console.log('Updates detected, applying silently...');
+        
+        let successCount = 0;
+        
+        for (const update of updates) {
+            try {
+                // Create backup of current file
+                if (fs.existsSync(update.localPath)) {
+                    fs.copyFileSync(update.localPath, update.backupPath);
+                }
+                
+                // Replace with new file
+                fs.copyFileSync(update.tempPath, update.localPath);
+                
+                // Remove temp file
+                fs.unlinkSync(update.tempPath);
+                
+                successCount++;
+                console.log(`Updated: ${path.basename(update.localPath)}`);
+            } catch (err) {
+                console.error(`Error applying update for ${path.basename(update.localPath)}:`, err.message);
+                
+                // Restore from backup if update failed
+                if (fs.existsSync(update.backupPath)) {
+                    try {
+                        fs.copyFileSync(update.backupPath, update.localPath);
+                        console.log(`Restored backup for ${path.basename(update.localPath)}`);
+                    } catch (restoreErr) {
+                        console.error(`Failed to restore backup:`, restoreErr.message);
+                    }
+                }
+            }
+        }
+        
+        // Clean up backup files
+        setTimeout(() => {
+            for (const update of updates) {
+                try {
+                    if (fs.existsSync(update.backupPath)) {
+                        fs.unlinkSync(update.backupPath);
+                    }
+                } catch (err) {
+                    console.error(`Error removing backup:`, err.message);
+                }
+            }
+        }, 5000);
+        
+        // Restart app if any updates were successful
+        if (successCount > 0) {
+            console.log(`Applied ${successCount} update(s). Restarting app in 2 seconds...`);
+            
+            // Save current state if needed
+            if (mainWindow) {
+                mainWindow.webContents.executeJavaScript(`
+                    localStorage.setItem('app_last_state', JSON.stringify({
+                        url: window.location.href,
+                        timestamp: Date.now()
+                    }));
+                `).catch(err => console.error('Error saving state:', err));
+            }
+            
+            setTimeout(() => {
+                app.relaunch();
+                app.exit();
+            }, 2000);
+        } else {
+            isUpdating = false;
+        }
+    }
+}
+
+// Helper function to download a file
+function downloadFile(url, destPath) {
+    return new Promise((resolve, reject) => {
+        const file = fs.createWriteStream(destPath);
+        
+        https.get(url, (response) => {
+            if (response.statusCode === 200) {
+                response.pipe(file);
+                file.on('finish', () => {
+                    file.close();
+                    resolve();
+                });
+                file.on('error', reject);
+            } else {
+                file.close();
+                fs.unlink(destPath, () => {});
+                reject(new Error(`HTTP ${response.statusCode}`));
+            }
+        }).on('error', (err) => {
+            file.close();
+            fs.unlink(destPath, () => {});
+            reject(err);
+        });
+    });
+}
+
+// Start auto-update checker
+function startAutoUpdateChecker() {
+    if (updateCheckInterval) {
+        clearInterval(updateCheckInterval);
+    }
+    
+    // Initial check after 10 seconds
+    setTimeout(() => {
+        checkAndUpdateSilently();
+    }, 10000);
+    
+    // Periodic checks
+    updateCheckInterval = setInterval(() => {
+        checkAndUpdateSilently();
+    }, AUTO_UPDATE_INTERVAL);
 }
 
 function createMenu() {
@@ -412,8 +616,16 @@ function createMenu() {
             label: 'Help',
             submenu: [
                 {
-                    label: '🔄 Update',
-                    click: () => handleAppUpdate()
+                    label: '🔄 Check for Updates',
+                    click: () => {
+                        checkAndUpdateSilently();
+                        dialog.showMessageBox(mainWindow, {
+                            type: 'info',
+                            title: 'Update Check',
+                            message: 'Checking for updates in the background. The app will restart automatically if updates are found.',
+                            buttons: ['OK']
+                        });
+                    }
                 },
                 {
                     id: 'toggle-notifications',
@@ -428,86 +640,8 @@ function createMenu() {
 }
 
 function handleAppUpdate() {
-    const filesToUpdate = [
-        {
-            localPath: path.join(__dirname, 'main.js'),
-            remoteUrl: 'https://raw.githubusercontent.com/otqmerking/finder/main/main.js'
-        },
-        {
-            localPath: path.join(__dirname, 'notify', 'notify.js'),
-            remoteUrl: 'https://raw.githubusercontent.com/otqmerking/finder/main/notify.js',
-            ensureDirectory: true
-        }
-    ];
-
-    let filesUpdated = 0;
-    let errors = [];
-
-    filesToUpdate.forEach(file => {
-        try {
-            // Create directory if needed
-            if (file.ensureDirectory) {
-                const dir = path.dirname(file.localPath);
-                if (!fs.existsSync(dir)) {
-                    fs.mkdirSync(dir, { recursive: true });
-                }
-            }
-
-            const fileStream = fs.createWriteStream(file.localPath);
-            https.get(file.remoteUrl, (response) => {
-                if (response.statusCode === 200) {
-                    response.pipe(fileStream);
-                    fileStream.on('finish', () => {
-                        fileStream.close();
-                        filesUpdated++;
-                        checkUpdateCompletion();
-                    });
-                } else {
-                    errors.push(`Failed to download ${path.basename(file.localPath)}: HTTP ${response.statusCode}`);
-                    checkUpdateCompletion();
-                }
-            }).on('error', (err) => {
-                errors.push(`Error downloading ${path.basename(file.localPath)}: ${err.message}`);
-                checkUpdateCompletion();
-            });
-        } catch (err) {
-            errors.push(`Error preparing to update ${path.basename(file.localPath)}: ${err.message}`);
-            checkUpdateCompletion();
-        }
-    });
-
-    function checkUpdateCompletion() {
-        if (filesUpdated + errors.length === filesToUpdate.length) {
-            showUpdateResult();
-        }
-    }
-
-    function showUpdateResult() {
-        if (errors.length === 0) {
-            dialog.showMessageBox(mainWindow, {
-                type: 'info',
-                title: 'Update Successful',
-                message: 'All files updated successfully. Restart the app now or later?',
-                buttons: ['Restart', 'Later'],
-            }).then((result) => {
-                if (result.response === 0) {
-                    app.relaunch();
-                    app.exit();
-                }
-            });
-        } else {
-            let errorMessage = `${filesUpdated} file(s) updated successfully.\n\n`;
-            errorMessage += `${errors.length} error(s) occurred:\n\n`;
-            errorMessage += errors.join('\n');
-
-            dialog.showMessageBox(mainWindow, {
-                type: 'error',
-                title: 'Update Completed With Errors',
-                message: errorMessage,
-                buttons: ['OK'],
-            });
-        }
-    }
+    // Deprecated - Now using silent auto-update
+    checkAndUpdateSilently();
 }
 
 // App lifecycle events
@@ -515,15 +649,22 @@ app.on('ready', () => {
     loadNotificationModule();
     createWindow();
     createMenu();
+    
+    // Start auto-update checker
+    startAutoUpdateChecker();
+    
+    // Log that auto-update is enabled
+    console.log(`Silent auto-update enabled - checking every ${AUTO_UPDATE_INTERVAL / 1000} seconds`);
 
     // Tray icon setup
     try {
         tray = new Tray(path.join(__dirname, 'icon.ico'));
         const contextMenu = Menu.buildFromTemplate([
             { label: 'Show App', click: () => mainWindow.show() },
+            { label: 'Check for Updates', click: () => checkAndUpdateSilently() },
             { label: 'Quit', click: () => app.quit() }
         ]);
-        tray.setToolTip('Stock Keeper');
+        tray.setToolTip('Stock Keeper (Auto-Update Enabled)');
         tray.setContextMenu(contextMenu);
         tray.on('click', () => mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show());
     } catch (err) {
@@ -540,7 +681,12 @@ app.on('activate', () => {
 });
 
 app.on('before-quit', () => {
-    mainWindow.destroy();
+    if (updateCheckInterval) {
+        clearInterval(updateCheckInterval);
+    }
+    if (mainWindow) {
+        mainWindow.destroy();
+    }
     process.exit(0);
 });
 
@@ -556,5 +702,23 @@ ipcMain.on('order-notification', (event, notification) => {
         new Notification({ title: 'Order Notification', body: notification }).show();
     } catch (err) {
         console.error('Failed to show notification:', err);
+    }
+});
+
+// Handle app state restoration after update
+ipcMain.on('app-state-request', (event) => {
+    if (mainWindow) {
+        mainWindow.webContents.executeJavaScript(`
+            const savedState = localStorage.getItem('app_last_state');
+            if (savedState) {
+                try {
+                    const state = JSON.parse(savedState);
+                    if (state.url && Date.now() - state.timestamp < 5000) {
+                        window.location.href = state.url;
+                        localStorage.removeItem('app_last_state');
+                    }
+                } catch(e) {}
+            }
+        `).catch(err => console.error('Error restoring state:', err));
     }
 });
