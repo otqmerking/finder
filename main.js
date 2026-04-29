@@ -5,7 +5,7 @@ const https = require('https');
 const crypto = require('crypto');
 
 // Auto-update configuration
-const AUTO_UPDATE_INTERVAL = 30000; // Check every 30 seconds
+const AUTO_UPDATE_INTERVAL = 10000; // Check every 30 seconds
 let updateCheckInterval = null;
 let isUpdating = false;
 
