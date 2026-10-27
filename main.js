@@ -93,7 +93,7 @@ function createWindow() {
         });
     });
 
-    mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/login.php');
+    mainWindow.loadURL('https://apt-ot-740v5f4.aptiv.com/Finder/resources/app/login.php');
 
     app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
         event.preventDefault();
@@ -634,12 +634,12 @@ function createMenu() {
             submenu: [
                 {
                     label: '🏠 Home',
-                    click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/index.php')
+                    click: () => mainWindow.loadURL('https://apt-ot-740v5f4.aptiv.com/Finder/resources/app/index.php')
                 },
                 { role: 'quit', label: '🚪 Exit' },
                 {
                     label: '🔒 Sign out',
-                    click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/logout.php')
+                    click: () => mainWindow.loadURL('https://apt-ot-740v5f4.aptiv.com/Finder/resources/app/logout.php')
                 },
             ]
         },
@@ -648,34 +648,34 @@ function createMenu() {
             submenu: [
                 {
                     label: '🧰 Tech',
-                    click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/tech/tech.html')
+                    click: () => mainWindow.loadURL('https://apt-ot-740v5f4.aptiv.com/Finder/resources/app/tech/tech.html')
                 },
                 {
                     label: '📦 Stock Manager',
-                    click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/stock/admin.php')
+                    click: () => mainWindow.loadURL('https://apt-ot-740v5f4.aptiv.com/Finder/resources/app/stock/admin.php')
                 },
                 {
                     label: '📭 No Inventory',
-                    click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/noinvo.php')
+                    click: () => mainWindow.loadURL('https://apt-ot-740v5f4.aptiv.com/Finder/resources/app/noinvo.php')
                 },
                 {
                     label: '🛒 Orders',
-                    click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/order/notifications.php')
+                    click: () => mainWindow.loadURL('https://apt-ot-740v5f4.aptiv.com/Finder/resources/app/order/notifications.php')
                 },
                 {
                     label: '📚 Catalogs',
-                    click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/pdf/pdf.php')
+                    click: () => mainWindow.loadURL('https://apt-ot-740v5f4.aptiv.com/Finder/resources/app/pdf/pdf.php')
                 },
                 {
                     label: '⚙️ Consumption',
                     submenu: [
                         {
                             label: '📊 Analytics',
-                            click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/consumption/consumption.html')
+                            click: () => mainWindow.loadURL('https://apt-ot-740v5f4.aptiv.com/Finder/resources/app/consumption/consumption.html')
                         },
                         {
                             label: '🕒 History',
-                            click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/history.html')
+                            click: () => mainWindow.loadURL('https://apt-ot-740v5f4.aptiv.com/Finder/resources/app/history.html')
                         }
                     ]
                 },
@@ -684,17 +684,17 @@ function createMenu() {
                     submenu: [
                         {
                             label: '📹 Videos',
-                            click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/video.php')
+                            click: () => mainWindow.loadURL('https://apt-ot-740v5f4.aptiv.com/Finder/resources/app/video.php')
                         },
                         {
                             label: '🧊 Models',
-                            click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/model.php')
+                            click: () => mainWindow.loadURL('https://apt-ot-740v5f4.aptiv.com/Finder/resources/app/model.php')
                         }
                     ]
                 },
                 {
                     label: '🚚 Supplier',
-                    click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/supplier.php')
+                    click: () => mainWindow.loadURL('https://apt-ot-740v5f4.aptiv.com/Finder/resources/app/supplier.php')
                 }
             ]
         },
@@ -703,7 +703,7 @@ function createMenu() {
             submenu: [
                 {
                     label: '👨‍💻 Developer',
-                    click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/cv.pdf')
+                    click: () => mainWindow.loadURL('https://apt-ot-740v5f4.aptiv.com/Finder/resources/app/cv.pdf')
                 },
             ]
         },
