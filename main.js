@@ -6,15 +6,12 @@ const crypto = require('crypto');
 const vm = require('vm');
 
 // ============================================================
-// AUTO-UPDATE CONFIGURATION
+// UPDATE CONFIGURATION (manual only)
 // ============================================================
-const AUTO_UPDATE_INTERVAL = 30 * 1000;   // 30s between checks
-const UPDATE_INITIAL_DELAY = 15 * 1000;   // wait 15s after start before first check
-const DOWNLOAD_TIMEOUT_MS  = 20 * 1000;   // abort a download after 20s
-const DOWNLOAD_RETRIES     = 3;           // retry attempts per file
-const RETRY_DELAY_MS       = 2000;
+const DOWNLOAD_TIMEOUT_MS = 20 * 1000;   // abort a download after 20s
+const DOWNLOAD_RETRIES    = 3;           // retry attempts per file
+const RETRY_DELAY_MS      = 2000;
 
-let updateCheckInterval = null;
 let isUpdating = false;
 
 const UPDATE_MANIFEST = [
@@ -82,7 +79,6 @@ function createWindow() {
         },
     });
 
-    // Session / cache configuration
     session.defaultSession.clearCache();
     mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
         callback({
@@ -330,7 +326,6 @@ function toggleNotifications() {
 
     if (isNotifyEnabled()) {
         try {
-            // Drop from require cache first so Windows releases the handle
             try { delete require.cache[require.resolve('./notify.js')]; } catch {}
             fs.unlinkSync(destPath);
             console.log('Notifications disabled - notify.js removed');
@@ -373,7 +368,6 @@ function calculateFileHash(filePath) {
 
 /**
  * HTTPS GET -> Buffer, with timeout + redirect handling.
- * Accumulates in memory so we can validate before touching disk.
  */
 function httpsGetBuffer(url, redirectsLeft = 5) {
     return new Promise((resolve, reject) => {
@@ -444,10 +438,7 @@ async function downloadFileWithRetry(url, validator) {
     throw lastErr || new Error('Download failed');
 }
 
-/**
- * Atomic write: write to .tmp, fsync, then rename over target.
- * A crash mid-write cannot corrupt the target file.
- */
+/** Atomic write: .tmp -> fsync -> rename. */
 function atomicWriteFileSync(targetPath, buffer) {
     const tmp = targetPath + '.tmp-' + process.pid + '-' + Date.now();
     const fd = fs.openSync(tmp, 'w');
@@ -460,9 +451,7 @@ function atomicWriteFileSync(targetPath, buffer) {
     fs.renameSync(tmp, targetPath);
 }
 
-/**
- * Best-effort syntax check so we never install a broken main.js.
- */
+/** Syntax check so we never install a broken main.js. */
 function syntaxCheck(buffer, filename) {
     try {
         new vm.Script(buffer.toString('utf8'), { filename });
@@ -473,18 +462,52 @@ function syntaxCheck(buffer, filename) {
     }
 }
 
+/** Cleanup leftover backups + .tmp files (runs at startup). */
+function cleanupBackups() {
+    for (const file of UPDATE_MANIFEST) {
+        try {
+            if (fs.existsSync(file.backupPath)) {
+                fs.unlinkSync(file.backupPath);
+                console.log(`Cleaned up old backup: ${path.basename(file.backupPath)}`);
+            }
+        } catch (err) {
+            console.warn(`Could not remove backup ${file.backupPath}:`, err.message);
+        }
+        try {
+            const dir = path.dirname(file.localPath);
+            const base = path.basename(file.localPath);
+            for (const entry of fs.readdirSync(dir)) {
+                if (entry.startsWith(base + '.tmp-')) {
+                    try { fs.unlinkSync(path.join(dir, entry)); } catch {}
+                }
+            }
+        } catch {}
+    }
+}
+
 // ============================================================
-// MAIN UPDATE FLOW
+// MANUAL UPDATE FLOW (triggered by user only)
 // ============================================================
-async function checkAndUpdateSilently() {
+async function runManualUpdate() {
     if (isUpdating) {
-        console.log('Update already in progress, skipping.');
+        dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'Update in progress',
+            message: 'An update check is already running. Please wait.',
+            buttons: ['OK']
+        });
         return;
     }
+
     isUpdating = true;
 
+    // Show a non-blocking "checking" box — user sees feedback
+    // (we don't await it; it closes when we show the final dialog)
+    if (mainWindow) {
+        mainWindow.webContents.send('update-status', 'checking');
+    }
+
     try {
-        // 1. Determine what's out of date
         const pending = [];
 
         for (const file of UPDATE_MANIFEST) {
@@ -503,7 +526,6 @@ async function checkAndUpdateSilently() {
                     continue;
                 }
 
-                // Syntax gate — refuse to install broken code
                 if (!syntaxCheck(remoteBuf, file.localPath)) {
                     console.error(`Refusing to apply ${path.basename(file.localPath)}: syntax error in remote file`);
                     continue;
@@ -517,11 +539,16 @@ async function checkAndUpdateSilently() {
         }
 
         if (pending.length === 0) {
-            console.log('No updates to apply.');
+            await dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'No Updates',
+                message: 'You are already running the latest version.',
+                buttons: ['OK']
+            });
             return;
         }
 
-        // 2. Apply atomically, keeping a backup for the next boot
+        // Apply
         let successCount = 0;
 
         for (const { file, remoteBuf } of pending) {
@@ -546,12 +573,16 @@ async function checkAndUpdateSilently() {
         }
 
         if (successCount === 0) {
-            console.log('No updates were successfully applied.');
+            await dialog.showMessageBox(mainWindow, {
+                type: 'error',
+                title: 'Update Failed',
+                message: 'Updates were found but none could be applied. Check the console for details.',
+                buttons: ['OK']
+            });
             return;
         }
 
-        console.log(`Applied ${successCount} update(s). Restarting in 2s...`);
-
+        // Save state before restart
         if (mainWindow && !mainWindow.isDestroyed()) {
             try {
                 await mainWindow.webContents.executeJavaScript(`
@@ -567,54 +598,30 @@ async function checkAndUpdateSilently() {
             }
         }
 
-        setTimeout(() => {
+        // Tell user and let them restart — this is the only behavioural change
+        // from the auto-update version: user confirms restart.
+        const { response } = await dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'Update Ready',
+            message: `Update downloaded (${successCount} file${successCount === 1 ? '' : 's'}). Restart now to apply?`,
+            buttons: ['Restart Now', 'Later'],
+            defaultId: 0,
+            cancelId: 1
+        });
+
+        if (response === 0) {
             app.relaunch();
             app.exit(0);
-        }, 2000);
+        } else {
+            console.log('User deferred restart. New files are on disk; will apply on next launch.');
+        }
 
     } catch (err) {
         console.error('Update check failed:', err);
+        dialog.showErrorBox('Update Error', 'Update failed: ' + err.message);
+    } finally {
         isUpdating = false;
     }
-    // NOTE: if we scheduled a restart we intentionally leave isUpdating = true
-    // so no further update runs fire before the process dies.
-}
-
-/** Runs once at startup — cleans up leftover backups & temp files. */
-function cleanupBackups() {
-    for (const file of UPDATE_MANIFEST) {
-        try {
-            if (fs.existsSync(file.backupPath)) {
-                fs.unlinkSync(file.backupPath);
-                console.log(`Cleaned up old backup: ${path.basename(file.backupPath)}`);
-            }
-        } catch (err) {
-            console.warn(`Could not remove backup ${file.backupPath}:`, err.message);
-        }
-        try {
-            const dir = path.dirname(file.localPath);
-            const base = path.basename(file.localPath);
-            for (const entry of fs.readdirSync(dir)) {
-                if (entry.startsWith(base + '.tmp-')) {
-                    try { fs.unlinkSync(path.join(dir, entry)); } catch {}
-                }
-            }
-        } catch {}
-    }
-}
-
-function startAutoUpdateChecker() {
-    if (updateCheckInterval) clearInterval(updateCheckInterval);
-
-    cleanupBackups();
-
-    setTimeout(() => {
-        checkAndUpdateSilently();
-    }, UPDATE_INITIAL_DELAY);
-
-    updateCheckInterval = setInterval(() => {
-        checkAndUpdateSilently();
-    }, AUTO_UPDATE_INTERVAL);
 }
 
 // ============================================================
@@ -719,15 +726,7 @@ function createMenu() {
             submenu: [
                 {
                     label: '🔄 Check for Updates',
-                    click: () => {
-                        checkAndUpdateSilently();
-                        dialog.showMessageBox(mainWindow, {
-                            type: 'info',
-                            title: 'Update Check',
-                            message: 'Checking for updates in the background. The app will restart automatically if updates are found.',
-                            buttons: ['OK']
-                        });
-                    }
+                    click: () => runManualUpdate()
                 },
                 {
                     id: 'toggle-notifications',
@@ -749,18 +748,19 @@ app.on('ready', () => {
     createWindow();
     createMenu();
 
-    startAutoUpdateChecker();
+    // Only cleanup is automatic — the actual check is user-driven
+    cleanupBackups();
 
-    console.log(`Silent auto-update enabled - checking every ${AUTO_UPDATE_INTERVAL / 1000}s`);
+    console.log('Manual update mode — updates only run when user clicks Help → Check for Updates');
 
     try {
         tray = new Tray(path.join(__dirname, 'icon.ico'));
         const contextMenu = Menu.buildFromTemplate([
             { label: 'Show App', click: () => mainWindow.show() },
-            { label: 'Check for Updates', click: () => checkAndUpdateSilently() },
+            { label: 'Check for Updates', click: () => runManualUpdate() },
             { label: 'Quit', click: () => app.quit() }
         ]);
-        tray.setToolTip('Stock Keeper (Auto-Update Enabled)');
+        tray.setToolTip('Stock Keeper');
         tray.setContextMenu(contextMenu);
         tray.on('click', () => mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show());
     } catch (err) {
@@ -777,7 +777,6 @@ app.on('activate', () => {
 });
 
 app.on('before-quit', () => {
-    if (updateCheckInterval) clearInterval(updateCheckInterval);
     if (mainWindow) mainWindow.destroy();
     process.exit(0);
 });
