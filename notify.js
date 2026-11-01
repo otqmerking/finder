@@ -16,7 +16,7 @@ function showNewOrderNotification(mainWindow, orderDetails) {
         notification.on('click', () => {
             if (mainWindow) {
                 mainWindow.show();
-                mainWindow.loadURL('https://dlbsxk8q3.aptiv.com/finder/resources/app/order/notifications.php');
+                mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/finder/resources/app/order/notifications.php');
             }
         });
 
@@ -28,7 +28,7 @@ function showNewOrderNotification(mainWindow, orderDetails) {
 
 function checkForNewOrders(mainWindow) {
     try {
-        http.get('http://dlbsxk8q3.aptiv.com/Finder/Resources/app/order/orders.txt', (response) => {
+        http.get('http://apt-ot-740v5f4.aptiv.com/Finder/Resources/app/order/orders.txt', (response) => {
             let data = '';
             response.on('data', (chunk) => data += chunk);
             response.on('end', () => processOrders(data, mainWindow));
