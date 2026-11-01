@@ -655,6 +655,10 @@ function createMenu() {
                     click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/stock/admin.php')
                 },
                 {
+                    label: '📋 Inventory',
+                    click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/inventory/admin.php')
+                },
+                {
                     label: '📭 No Inventory',
                     click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/noinvo.php')
                 },
@@ -724,6 +728,10 @@ function createMenu() {
         {
             label: 'Help',
             submenu: [
+                {
+                    label: '📱 App',
+                    click: () => mainWindow.loadURL('http://apt-ot-740v5f4.aptiv.com/Finder/resources/app/phone.html')
+                },
                 {
                     label: '🔄 Check for Updates',
                     click: () => runManualUpdate()
